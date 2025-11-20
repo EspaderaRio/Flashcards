@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Flashcards</title>
-  <script>
-      // ===================== ELEMENT SDK ===================== //
+   <script>
+     // ===================== ELEMENT SDK ===================== //
 
 (function () {
 
@@ -78,6 +78,34 @@
       font-weight: 700;
       color: white;
       text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: rgba(255,255,255,0.2);
+      color: white;
+    }
+
+    .tab.active {
+      background: white;
+      color: #667eea;
+    }
+
+    .tab:active {
+      transform: scale(0.98);
     }
 
     .deck-info {
@@ -410,6 +438,92 @@
       margin: 20px 0;
     }
 
+    .quiz-card {
+      background: white;
+      border-radius: 20px;
+      padding: 32px 24px;
+      width: 100%;
+      min-height: 280px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    }
+
+    .quiz-question {
+      font-size: 20px;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .quiz-option {
+      padding: 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      background: white;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: left;
+      font-weight: 500;
+    }
+
+    .quiz-option:hover {
+      border-color: #667eea;
+      background: rgba(102, 126, 234, 0.05);
+    }
+
+    .quiz-option.selected {
+      border-color: #667eea;
+      background: rgba(102, 126, 234, 0.1);
+    }
+
+    .quiz-option.correct {
+      border-color: #10b981;
+      background: rgba(16, 185, 129, 0.1);
+      color: #10b981;
+    }
+
+    .quiz-option.incorrect {
+      border-color: #ef4444;
+      background: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+    }
+
+    .quiz-option:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .quiz-feedback {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 16px;
+    }
+
+    .quiz-feedback.correct {
+      background: rgba(16, 185, 129, 0.15);
+      color: #10b981;
+    }
+
+    .quiz-feedback.incorrect {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+    }
+
+    .quiz-controls {
+      margin-bottom: 16px;
+    }
+
     .footer {
       text-align: center;
       padding: 16px 0;
@@ -436,8 +550,8 @@
     }
   </style>
   <style>@view-transition { navigation: auto; }</style>
-  <script>
-// ===================== DATA SDK ===================== //
+   <script>
+     // ===================== DATA SDK ===================== //
 
 (function () {
   const STORAGE_KEY = "flash_app_storage_v1";
@@ -506,6 +620,8 @@
    <div class="header">
     <h1 id="appTitle">Flashcards</h1>
    </div>
+   <div class="tabs"><button class="tab active" id="studyTab">Study</button> <button class="tab" id="quizTab">Quiz</button>
+   </div>
    <div class="deck-info">
     <div class="deck-name" id="deckName">
      No deck loaded
@@ -514,20 +630,46 @@
      0 / 0
     </div>
    </div>
-   <div class="card-container">
-    <div id="card" class="card" role="button" aria-label="Flashcard">
-     <div class="card-face front" id="frontFace">
-      Load a deck to begin
+   <div id="studyMode">
+    <div class="card-container">
+     <div id="card" class="card" role="button" aria-label="Flashcard">
+      <div class="card-face front" id="frontFace">
+       Load a deck to begin
+      </div>
+      <div class="card-face back" id="backFace"></div>
      </div>
-     <div class="card-face back" id="backFace"></div>
+    </div>
+    <div class="nav-buttons"><button class="btn-prev" id="prevBtn">← Prev</button> <button class="btn-flip" id="flipBtn">Flip</button> <button class="btn-next" id="nextBtn">Next →</button>
+    </div>
+    <div class="mark-buttons"><button id="markKnown">✓ Known</button> <button id="markUnsure">? Unsure</button>
+    </div>
+    <div class="stats" id="stats">
+     Known: 0 · Unsure: 0
     </div>
    </div>
-   <div class="nav-buttons"><button class="btn-prev" id="prevBtn">← Prev</button> <button class="btn-flip" id="flipBtn">Flip</button> <button class="btn-next" id="nextBtn">Next →</button>
-   </div>
-   <div class="mark-buttons"><button id="markKnown">✓ Known</button> <button id="markUnsure">? Unsure</button>
-   </div>
-   <div class="stats" id="stats">
-    Known: 0 · Unsure: 0
+   <div id="quizMode" style="display: none;">
+    <div class="card-container">
+     <div class="quiz-card">
+      <div class="quiz-question" id="quizQuestion">
+       Load a deck to start quiz
+      </div>
+      <div class="quiz-options" id="quizOptions"></div>
+     </div>
+    </div>
+    <div class="quiz-feedback" id="quizFeedback" style="display: none;"></div>
+    <div class="quiz-controls"><button class="btn-primary" id="nextQuizBtn" style="display: none; width: 100%; padding: 16px; font-size: 16px; font-weight: 600; border: none; border-radius: 12px; cursor: pointer; background: white; color: #667eea;">Next Question</button>
+    </div>
+    <div class="quiz-results" id="quizResults" style="display: none;">
+     <div style="text-align: center; background: white; border-radius: 20px; padding: 32px; margin-bottom: 16px;">
+      <h2 style="margin: 0 0 16px 0; font-size: 24px; color: #1a1a1a;">Quiz Complete!</h2>
+      <div id="quizScore" style="font-size: 48px; font-weight: 700; color: #667eea; margin-bottom: 8px;">
+       0/0
+      </div>
+      <div id="quizPercent" style="font-size: 18px; color: #666; margin-bottom: 24px;">
+       0%
+      </div><button id="restartQuiz" style="padding: 16px 32px; font-size: 16px; font-weight: 600; border: none; border-radius: 12px; cursor: pointer; background: #667eea; color: white;">Restart Quiz</button>
+     </div>
+    </div>
    </div>
    <div class="footer" id="footerText">
     Made for JSON flashcards
@@ -576,6 +718,11 @@
     let isFlipped = false;
     let knownCards = new Set();
     let unsureCards = new Set();
+    let currentMode = 'study';
+    let quizDeck = [];
+    let quizIndex = 0;
+    let quizScore = 0;
+    let currentAnswer = null;
 
     const elements = {
       card: document.getElementById('card'),
@@ -600,20 +747,137 @@
       elements.appTitle.textContent = config.app_title || defaultConfig.app_title;
       elements.footerText.textContent = config.footer_text || defaultConfig.footer_text;
       
-      if (filteredDeck.length === 0) {
-        elements.frontFace.textContent = config.empty_state_text || defaultConfig.empty_state_text;
-        elements.backFace.textContent = '';
-        elements.deckName.textContent = 'No deck loaded';
-        elements.position.textContent = '0 / 0';
+      if (currentMode === 'study') {
+        if (filteredDeck.length === 0) {
+          elements.frontFace.textContent = config.empty_state_text || defaultConfig.empty_state_text;
+          elements.backFace.textContent = '';
+          elements.deckName.textContent = 'No deck loaded';
+          elements.position.textContent = '0 / 0';
+        } else {
+          const card = filteredDeck[currentIndex];
+          elements.frontFace.textContent = card.front || '';
+          elements.backFace.textContent = card.back || '';
+          elements.deckName.textContent = `Deck: ${filteredDeck.length} cards`;
+          elements.position.textContent = `${currentIndex + 1} / ${filteredDeck.length}`;
+        }
+        elements.stats.textContent = `Known: ${knownCards.size} · Unsure: ${unsureCards.size}`;
       } else {
-        const card = filteredDeck[currentIndex];
-        elements.frontFace.textContent = card.front || '';
-        elements.backFace.textContent = card.back || '';
-        elements.deckName.textContent = `Deck: ${filteredDeck.length} cards`;
-        elements.position.textContent = `${currentIndex + 1} / ${filteredDeck.length}`;
+        updateQuizUI();
+      }
+    }
+
+    function generateQuiz() {
+      if (deck.length < 2) {
+        document.getElementById('quizQuestion').textContent = 'Need at least 2 cards to create a quiz';
+        return;
+      }
+      
+      quizDeck = [...deck].sort(() => Math.random() - 0.5);
+      quizIndex = 0;
+      quizScore = 0;
+      document.getElementById('quizResults').style.display = 'none';
+      showQuizQuestion();
+    }
+
+    function showQuizQuestion() {
+      if (quizIndex >= quizDeck.length) {
+        showQuizResults();
+        return;
       }
 
-      elements.stats.textContent = `Known: ${knownCards.size} · Unsure: ${unsureCards.size}`;
+      const question = quizDeck[quizIndex];
+      currentAnswer = question.back;
+      
+      document.getElementById('quizQuestion').textContent = question.front;
+      document.getElementById('quizFeedback').style.display = 'none';
+      document.getElementById('nextQuizBtn').style.display = 'none';
+      
+      // Generate options: correct answer + 3 random wrong answers
+      const options = [question.back];
+      const otherCards = deck.filter(c => c.back !== question.back);
+      
+      while (options.length < 4 && otherCards.length > 0) {
+        const randomIndex = Math.floor(Math.random() * otherCards.length);
+        const wrongAnswer = otherCards[randomIndex].back;
+        if (!options.includes(wrongAnswer)) {
+          options.push(wrongAnswer);
+        }
+        otherCards.splice(randomIndex, 1);
+      }
+      
+      // Shuffle options
+      options.sort(() => Math.random() - 0.5);
+      
+      // Render options
+      const optionsContainer = document.getElementById('quizOptions');
+      optionsContainer.innerHTML = '';
+      
+      options.forEach(option => {
+        const btn = document.createElement('button');
+        btn.className = 'quiz-option';
+        btn.textContent = option;
+        btn.addEventListener('click', () => checkAnswer(option, btn));
+        optionsContainer.appendChild(btn);
+      });
+    }
+
+    function checkAnswer(selectedAnswer, selectedButton) {
+      const isCorrect = selectedAnswer === currentAnswer;
+      
+      if (isCorrect) {
+        quizScore++;
+        selectedButton.classList.add('correct');
+        const feedback = document.getElementById('quizFeedback');
+        feedback.textContent = '✓ Correct!';
+        feedback.className = 'quiz-feedback correct';
+        feedback.style.display = 'block';
+      } else {
+        selectedButton.classList.add('incorrect');
+        const feedback = document.getElementById('quizFeedback');
+        feedback.textContent = `✗ Incorrect. The answer was: ${currentAnswer}`;
+        feedback.className = 'quiz-feedback incorrect';
+        feedback.style.display = 'block';
+        
+        // Highlight correct answer
+        document.querySelectorAll('.quiz-option').forEach(btn => {
+          if (btn.textContent === currentAnswer) {
+            btn.classList.add('correct');
+          }
+        });
+      }
+      
+      // Disable all options
+      document.querySelectorAll('.quiz-option').forEach(btn => {
+        btn.disabled = true;
+      });
+      
+      document.getElementById('nextQuizBtn').style.display = 'block';
+      updateQuizProgress();
+    }
+
+    function showQuizResults() {
+      document.getElementById('quizResults').style.display = 'block';
+      document.querySelector('.quiz-card').style.display = 'none';
+      document.getElementById('quizFeedback').style.display = 'none';
+      document.getElementById('nextQuizBtn').style.display = 'none';
+      
+      const percentage = Math.round((quizScore / quizDeck.length) * 100);
+      document.getElementById('quizScore').textContent = `${quizScore}/${quizDeck.length}`;
+      document.getElementById('quizPercent').textContent = `${percentage}%`;
+    }
+
+    function updateQuizProgress() {
+      elements.deckName.textContent = `Quiz Mode`;
+      elements.position.textContent = `${quizIndex + 1} / ${quizDeck.length}`;
+    }
+
+    function updateQuizUI() {
+      if (quizDeck.length === 0) {
+        elements.deckName.textContent = 'No quiz';
+        elements.position.textContent = '0 / 0';
+      } else {
+        updateQuizProgress();
+      }
     }
 
     function flipCard() {
@@ -786,13 +1050,45 @@
       updateUI();
     });
 
+    // Tab switching
+    document.getElementById('studyTab').addEventListener('click', () => {
+      currentMode = 'study';
+      document.getElementById('studyTab').classList.add('active');
+      document.getElementById('quizTab').classList.remove('active');
+      document.getElementById('studyMode').style.display = 'block';
+      document.getElementById('quizMode').style.display = 'none';
+      updateUI();
+    });
+
+    document.getElementById('quizTab').addEventListener('click', () => {
+      currentMode = 'quiz';
+      document.getElementById('quizTab').classList.add('active');
+      document.getElementById('studyTab').classList.remove('active');
+      document.getElementById('studyMode').style.display = 'none';
+      document.getElementById('quizMode').style.display = 'block';
+      generateQuiz();
+      updateUI();
+    });
+
+    document.getElementById('nextQuizBtn').addEventListener('click', () => {
+      quizIndex++;
+      document.querySelector('.quiz-card').style.display = 'block';
+      showQuizQuestion();
+    });
+
+    document.getElementById('restartQuiz').addEventListener('click', () => {
+      generateQuiz();
+    });
+
     // Keyboard navigation
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowRight') nextCard();
-      if (e.key === 'ArrowLeft') prevCard();
-      if (e.key === ' ' || e.key === 'Enter') {
-        e.preventDefault();
-        flipCard();
+      if (currentMode === 'study') {
+        if (e.key === 'ArrowRight') nextCard();
+        if (e.key === 'ArrowLeft') prevCard();
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          flipCard();
+        }
       }
     });
 
