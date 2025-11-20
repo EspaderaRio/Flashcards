@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Flashcards — JSON Powered</title>
+<style>
+  :root{
+    --bg:#0f1724; --card:#0b1220; --accent:#06b6d4; --muted:#9ca3af; --glass: rgba(255,255,255,0.03);
+  }
+  html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;}
+  body{background:
+    radial-gradient(1200px 600px at 10% 10%, rgba(6,182,212,0.06), transparent 10%),
+    radial-gradient(900px 400px at 90% 90%, rgba(99,102,241,0.04), transparent 10%),
+    var(--bg);
+    color:#e6eef6;
+    display:flex;align-items:center;justify-content:center;padding:28px;
+  }
+
+  .app{
+    width:100%; max-width:1100px; background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:14px; padding:20px; box-shadow: 0 10px 30px rgba(2,6,23,0.6); border: 1px solid rgba(255,255,255,0.03);
+    display:grid; grid-template-columns: 360px 1fr; gap:18px;
+  }
+
+  /* Sidebar */
+  .sidebar{padding:14px;background:var(--glass);border-radius:10px;}
+  .sidebar h2{margin:0 0 8px 0;font-size:16px;color:var(--accent)}
+  .controls{display:flex;flex-direction:column;gap:8px}
+  label{font-size:13px;color:var(--muted);margin-bottom:4px}
+  input[type=file]{display:block}
+  textarea{width:100%;min-height:96px;background:transparent;border:1px dashed rgba(255,255,255,0.04);color:inherit;padding:8px;border-radius:8px;font-family:monospace;font-size:13px}
+  .row{display:flex;gap:8px}
+  button{background:linear-gradient(180deg,var(--accent), #0ea5bc);border:none;padding:8px 10px;border-radius:8px;color:#042024;font-weight:600;cursor:pointer}
+  button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);font-weight:600}
+  .small{font-size:13px;padding:6px 8px;border-radius:6px}
+  .meta{font-size:13px;color:var(--muted);margin-top:8px}
+
+  /* Main */
+  .main{display:flex;flex-direction:column;gap:12px}
+  .card-wrap{display:flex;align-items:center;justify-content:center;flex:1;min-height:300px}
+  .card{
+    width:100%; max-width:720px; height:360px; border-radius:12px; background:linear-gradient(180deg,#071024,#021226);
+    display:flex;align-items:center;justify-content:center;padding:26px;box-shadow:0 8px 30px rgba(2,6,23,0.6); position:relative;
+    perspective:1000px; border:1px solid rgba(255,255,255,0.03);
+  }
+  .card-inner{
+    width:100%; height:100%; border-radius:10px; transform-style:preserve-3d; transition: transform 400ms cubic-bezier(.2,.9,.2,1);
+    display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;
+  }
+  .card.flipped .card-inner{transform:rotateY(180deg)}
+  .face{position:absolute;inset:0;backface-visibility:hidden;display:flex;align-items:center;justify-content:center;padding:22px;box-sizing:border-box}
+  .front{font-size:26px;font-weight:700}
+  .back{transform:rotateY(180deg);font-size:18px;line-height:1.4;color: #dbeafe}
+  .progress{display:flex;align-items:center;gap:10px}
+  .controls-bottom{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:8px 4px}
+  .pager{display:flex;gap:8px}
+  .muted{color:var(--muted);font-size:14px}
+  .search{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:inherit}
+  .tag{display:inline-block;padding:6px 8px;border-radius:999px;background:rgba(255,255,255,0.02);font-size:13px;color:var(--muted)}
+  .footer{font-size:13px;color:var(--muted);text-align:right}
+  .helper{font-size:12px;color:var(--muted);margin-top:6px}
+
+  /* responsive */
+  @media (max-width:880px){
+    .app{grid-template-columns:1fr; padding:12px}
+    .card{height:320px}
+  }
+</style>
+</head>
+<body>
+  <div class="app" role="application" aria-label="Flashcards app">
+    <aside class="sidebar" aria-label="Controls">
+      <h2>Flashcards (JSON)</h2>
+
+      <div class="controls">
+        <div>
+          <label for="file">Upload JSON file</label>
+          <input id="file" type="file" accept=".json,application/json">
+        </div>
+
+        <div>
+          <label for="pasteJson">Or paste JSON here</label>
+          <textarea id="pasteJson" placeholder='Paste JSON array here (example: [{"front":"Q","back":"A"}])'></textarea>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button id="loadPaste" class="small">Load JSON</button>
+            <button id="clearPaste" class="small ghost">Clear</button>
+          </div>
+        </div>
+
+        <div>
+          <label for="urlInput">Or load JSON from URL</label>
+          <div class="row">
+            <input id="urlInput" class="search" placeholder="https://example.com/cards.json" />
+            <button id="loadUrl" class="small">Fetch</button>
+          </div>
+          <div class="helper">CORS must allow fetch from your browser.</div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid rgba(255,255,255,0.03);margin:8px 0">
+
+        <div>
+          <label>Study Options</label>
+          <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+            <button id="shuffle" class="small ghost">Shuffle</button>
+            <button id="flipBtn" class="small">Flip</button>
+            <button id="prevBtn" class="small ghost">Previous</button>
+            <button id="nextBtn" class="small">Next</button>
+          </div>
+          <div class="helper">Keyboard: ← → flip: Space / Enter</div>
+        </div>
+
+        <div>
+          <label for="searchInput">Search cards</label>
+          <input id="searchInput" class="search" placeholder="Search front or back text...">
+        </div>
+
+        <div class="meta" id="meta">No deck loaded</div>
+
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <button id="exportJson" class="small ghost">Export deck (.json)</button>
+          <button id="clearDeck" class="small ghost">Clear deck</button>
+        </div>
+
+        <div class="helper" style="margin-top:14px">Tip: Make JSON as an array of objects with keys <code>front</code> and <code>back</code>. Extra fields (e.g., tags) are kept.</div>
+      </div>
+    </aside>
+
+    <main class="main" aria-live="polite">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div class="tag" id="deckName">No deck</div>
+        </div>
+        <div class="progress">
+          <div class="muted" id="position">0 / 0</div>
+        </div>
+      </div>
+
+      <div class="card-wrap">
+        <div id="card" class="card" tabindex="0" role="button" aria-pressed="false" aria-label="Flashcard">
+          <div class="card-inner">
+            <div class="face front" id="frontFace">Load a deck to begin</div>
+            <div class="face back" id="backFace" aria-hidden="true"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls-bottom">
+        <div class="pager">
+          <button id="markKnown" class="ghost small">Mark Known ✔</button>
+          <button id="markUnsure" class="ghost small">Mark Unsure ?</button>
+        </div>
+
+        <div style="display:flex;gap:8px;align-items:center">
+          <div class="muted" id="stats">Known: 0 · Unsure: 0</div>
+          <div style="width:8px"></div>
+          <div class="footer">Made for JSON flashcards</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+<script>
+(() => {
+  // State
+  let deck = [];           // original loaded deck
+  let working = [];        // possibly filtered/shuffled
+  let index = 0;
+  let flipped = false;
+  let knownSet = new Set();
+  let unsureSet = new Set();
+
+  // Elements
+  const fileInput = document.getElementById('file');
+  const pasteArea = document.getElementById('pasteJson');
+  const loadPasteBtn = document.getElementById('loadPaste');
+  const clearPasteBtn = document.getElementById('clearPaste');
+  const urlInput = document.getElementById('urlInput');
+  const loadUrlBtn = document.getElementById('loadUrl');
+  const shuffleBtn = document.getElementById('shuffle');
+  const flipBtn = document.getElementById('flipBtn');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const cardEl = document.getElementById('card');
+  const frontFace = document.getElementById('frontFace');
+  const backFace = document.getElementById('backFace');
+  const positionEl = document.getElementById('position');
+  const metaEl = document.getElementById('meta');
+  const deckNameEl = document.getElementById('deckName');
+  const searchInput = document.getElementById('searchInput');
+  const exportBtn = document.getElementById('exportJson');
+  const clearDeckBtn = document.getElementById('clearDeck');
+  const loadFile = fileInput;
+  const markKnownBtn = document.getElementById('markKnown');
+  const markUnsureBtn = document.getElementById('markUnsure');
+  const statsEl = document.getElementById('stats');
+
+  // Helpers
+  function render() {
+    if (!working.length) {
+      frontFace.textContent = 'No cards loaded';
+      backFace.textContent = '';
+      deckNameEl.textContent = 'No deck';
+      positionEl.textContent = '0 / 0';
+      metaEl.textContent = 'Load a JSON file or paste JSON to begin.';
+      cardEl.classList.remove('flipped');
+      flipped = false;
+      updateStats();
+      return;
+    }
+    const c = working[index];
+    frontFace.innerHTML = c.front ?? '[no front]';
+    backFace.innerHTML = c.back ?? '[no back]';
+    deckNameEl.textContent = `Deck: ${deck.length} cards`;
+    positionEl.textContent = `${index+1} / ${working.length}`;
+    metaEl.textContent = `Showing ${working.length} cards (original ${deck.length})`;
+    cardEl.setAttribute('aria-pressed', String(flipped));
+    cardEl.classList.toggle('flipped', flipped);
+    backFace.setAttribute('aria-hidden', String(!flipped));
+    updateStats();
+  }
+
+  function loadFromObjectArray(arr, name = '') {
+    // validate
+    if (!Array.isArray(arr)) throw new Error('JSON must be an array of objects.');
+    deck = arr.map(x => ({
+      front: x.front ?? x.q ?? x.question ?? '',
+      back: x.back ?? x.a ?? x.answer ?? '',
+      raw: x
+    }));
+    working = deck.slice();
+    index = 0;
+    knownSet.clear(); unsureSet.clear();
+    deckNameEl.textContent = name || `Deck (${deck.length})`;
+    render();
+  }
+
+  function parseAndLoadJSONText(text) {
+    let parsed;
+    try { parsed = JSON.parse(text); }
+    catch(e){ alert('Invalid JSON: ' + e.message); return; }
+    loadFromObjectArray(parsed);
+  }
+
+  // File input
+  fileInput.addEventListener('change', (ev) => {
+    const f = ev.target.files && ev.target.files[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const txt = e.target.result;
+        parseAndLoadJSONText(txt);
+      } catch (err) {
+        alert('Failed to load file: ' + err.message);
+      }
+    };
+    reader.readAsText(f);
+  });
+
+  // Paste JSON
+  loadPasteBtn.addEventListener('click', () => {
+    const txt = pasteArea.value.trim();
+    if (!txt) { alert('Paste JSON first'); return; }
+    parseAndLoadJSONText(txt);
+  });
+  clearPasteBtn.addEventListener('click', () => pasteArea.value = '');
+
+  // Fetch URL
+  loadUrlBtn.addEventListener('click', async () => {
+    const url = urlInput.value.trim();
+    if (!url) { alert('Enter a URL to fetch JSON from'); return; }
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Fetch failed: ' + res.status);
+      const json = await res.json();
+      loadFromObjectArray(json, url);
+    } catch (err) {
+      alert('Could not fetch or parse JSON: ' + err.message);
+    }
+  });
+
+  // Controls
+  function nextCard() { if (!working.length) return; index = (index + 1) % working.length; flipped = false; render(); }
+  function prevCard() { if (!working.length) return; index = (index - 1 + working.length) % working.length; flipped = false; render(); }
+  function flipCard() { if (!working.length) return; flipped = !flipped; render(); }
+
+  nextBtn.addEventListener('click', nextCard);
+  prevBtn.addEventListener('click', prevCard);
+  flipBtn.addEventListener('click', flipCard);
+  cardEl.addEventListener('click', flipCard);
+  cardEl.addEventListener('keydown', (e) => {
+    if (e.key === ' ' || e.key === 'Spacebar' || e.key === 'Enter') { e.preventDefault(); flipCard(); }
+    if (e.key === 'ArrowRight') nextCard();
+    if (e.key === 'ArrowLeft') prevCard();
+  });
+
+  // Shuffle
+  shuffleBtn.addEventListener('click', () => {
+    if (!deck.length) return;
+    // Fisher-Yates
+    for (let i = deck.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [deck[i], deck[j]] = [deck[j], deck[i]];
+    }
+    working = deck.slice();
+    index = 0; flipped = false;
+    render();
+  });
+
+  // Search/filter
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.trim().toLowerCase();
+    if (!q) { working = deck.slice(); index = 0; render(); return; }
+    working = deck.filter(c => (c.front && c.front.toLowerCase().includes(q)) || (c.back && c.back.toLowerCase().includes(q)));
+    index = 0; flipped = false;
+    render();
+  });
+
+  // Export
+  exportBtn.addEventListener('click', () => {
+    if (!deck.length) { alert('No deck to export'); return; }
+    const data = deck.map(d => d.raw ?? {front:d.front, back:d.back});
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'flashcards-export.json'; document.body.appendChild(a); a.click();
+    a.remove(); URL.revokeObjectURL(url);
+  });
+
+  clearDeckBtn.addEventListener('click', () => {
+    if (!confirm('Clear the current deck?')) return;
+    deck = []; working = []; index = 0; flipped = false; knownSet.clear(); unsureSet.clear();
+    render();
+  });
+
+  // Mark known/unsure
+  function updateStats() {
+    statsEl.textContent = `Known: ${knownSet.size} · Unsure: ${unsureSet.size}`;
+  }
+  markKnownBtn.addEventListener('click', () => {
+    if (!working.length) return;
+    knownSet.add(working[index]); unsureSet.delete(working[index]);
+    nextCard();
+    updateStats();
+  });
+  markUnsureBtn.addEventListener('click', () => {
+    if (!working.length) return;
+    unsureSet.add(working[index]); knownSet.delete(working[index]);
+    nextCard();
+    updateStats();
+  });
+
+  // Keyboard global shortcuts
+  window.addEventListener('keydown', (e) => {
+    if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
+    if (e.key === 'ArrowRight') nextCard();
+    if (e.key === 'ArrowLeft') prevCard();
+    if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); flipCard(); }
+    if (e.key.toLowerCase() === 's') shuffleBtn.click();
+  });
+
+  // Initial render
+  render();
+
+  // Expose small API for debugging / integration
+  window.Flashcards = {
+    loadArray: (arr) => loadFromObjectArray(arr),
+    getDeck: () => deck,
+    getWorking: () => working,
+    goTo: (n) => { if (!working.length) return; index = Math.max(0, Math.min(working.length-1, n)); render(); },
+    next: nextCard, prev: prevCard, flip: flipCard
+  };
+
+})();
+</script>
+</body>
+</html>
